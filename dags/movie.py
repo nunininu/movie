@@ -47,10 +47,11 @@ with DAG(
         task_id='merge.data',
         python_callable=fn_merge_data,
         system_site_packages=False,
-        requirements=REQUIREMENTS,
+        requirements=REQUIREMENTS
     )
 
     def common_get_data(ds_nodash, url_param):
+        from movie.api.call import gen_url, call_api, list2df, save_df
         print(ds_nodash, url_param)
         # TODO
         # API로 불러온 데이터를 
@@ -58,13 +59,14 @@ with DAG(
         # STEP 1 - GIT에서 PIP를 설치하고
         # BASE_DIR/dt=202040101/ 먼저 해서 잘 되면
         # repNationCd=k/도 붙여준다
+        # 그 후 다른 것도 붙여준다
     
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
         python_callable=common_get_data,
         system_site_packages=False,
-        requirements=REQUIREMENTS
-        op_kwargs="url_param": {"multiMovieYn": "Y"}
+        requirements=REQUIREMENTS,
+        op_kwargs={"url_param":{"multiMovieYn": "Y"}}
         )
 
     multi_n = PythonVirtualenvOperator(
@@ -72,7 +74,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs="url_param": {"multiMovieYn": "N"}
+        op_kwargs={"url_param":{"multiMovieYn": "N"}}
         )
     
 
@@ -81,7 +83,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs="url_param": {"repNationCd": "K"}
+        op_kwargs={"url_param":{"repNationCd": "K"}}
         )
     
 
@@ -90,7 +92,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs="url_param": {"repNationCd": "F"}
+        op_kwargs={"url_param":{"repNationCd": "F"}}
         )
     
     no_param = PythonVirtualenvOperator(
@@ -98,7 +100,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs="url_param": {}
+        op_kwargs={"url_param":{}}
         )
 
     rm_dir = BashOperator(task_id='rm.dir',
