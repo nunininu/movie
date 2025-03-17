@@ -33,6 +33,17 @@ def list2df(data: list, dt: str):
     df['dt'] = dt
     return df
 
+    # def test_list2df_check_num을 테스트하려면 call.py 에서 list2df를 바꿔야함
+    num_cols = ['rnum','rank','rankInten','salesAmt','audiCnt','audiAcc','scrnCnt','salesSheare','salesInten','salesChange','audiInten','audiChange'] 
+    
+    # 1) 이렇게 쓰거나
+    for col_name in num_cols:     
+        df[col_name] = pd.to_numeric(df[col_name]) 
+    # 2) 이렇게 써야함
+    df[num_cols] = df[num_cols].apply(pd.to_numeric) # 내가 test_list2df_check_num에서 작성한 코드 -> 거기가 아니라 여기에 넣어었어야했음 
+    
+    return df
+
 # def list2df(data, ymd):
 #     import pandas as pd
 #     df = pd.DataFrame(data)
