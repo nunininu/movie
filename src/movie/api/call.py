@@ -51,8 +51,13 @@ def save_df(df, base_path):
     df.to_parquet(base_path, partition_cols=['dt'])
     save_path = f"{base_path}/dt={df['dt'][0]}"
     return save_path
-    # ymd = "20210101"
-    # data = call_api(dt=ymd)
-    # df = list2df(data, ymd)
-    # base_path = "~/temp/movie"
+
+#     ymd = "20210101"
+#     data = call_api(dt=ymd)
+#     df = list2df(data, ymd)
+#     base_path = "~/temp/movie"
+    
+    
+
+    
     

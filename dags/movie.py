@@ -28,7 +28,8 @@ with DAG(
 
     def branch_fun(ds_nodash):
         import os
-        if os.path.exists(f"{BASE_DIR}/dt={ds_nodash}"):
+        check_path = os.path.expanduser(f"{BASE_DIR}/dt={ds_nodash}") #버그 수정
+        if os.path.exists(check_path): #버그 수정
             return rm_dir.task_id #task_id로 리턴하는 방법
             #return "rm.dir" #task실제이름으로 리턴하는 방법
         else:
@@ -50,9 +51,10 @@ with DAG(
         requirements=REQUIREMENTS
     )
 
-    def common_get_data(ds_nodash, url_param):
-        from movie.api.call import gen_url, call_api, list2df, save_df #
-        print(ds_nodash, url_param)
+    BASE_URL = "http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
+    KEY=os.getenv("MOVIE_KEY")
+
+    def common_get_data(ds_nodash, url_param, base_path):
         # TODO
         # API로 불러온 데이터를 
         # BASE_DIR/dt=20240101/repNationCd=K/****.parquet
@@ -60,7 +62,13 @@ with DAG(
         # BASE_DIR/dt=202040101/ 먼저 해서 잘 되면
         # repNationCd=k/도 붙여준다
         # 그 후 다른 것도 붙여준다
-    
+        from movie.api.call import call_api, list2df, save_df 
+        print(ds_nodash, url_param)
+        data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
+        df = list2df(data, ds_nodash)        # def test_save_df 에서 가져옴
+        save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
+        print(save_path, url_param)
+        
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
         python_callable=common_get_data,
@@ -103,9 +111,10 @@ with DAG(
         op_kwargs={"url_param":{}}
         )
 
-    rm_dir = BashOperator(task_id='rm.dir',
-                          bash_command='rm -rf $BASE_DIR/dt={{ ds_nodash }}',
-                          env={'BASE_DIR': BASE_DIR})
+    rm_dir = BashOperator(
+        task_id='rm.dir',
+        bash_command='rm -rf {BASE_DIR}' + '/dt={{ ds_nodash }}') #버그 수정
+                          
 
     echo_task = BashOperator(
         task_id='echo.task',
