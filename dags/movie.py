@@ -23,7 +23,7 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = []
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@0.1.0"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
 
     def branch_fun(ds_nodash):
@@ -56,8 +56,8 @@ with DAG(
         # API로 불러온 데이터를 
         # BASE_DIR/dt=20240101/repNationCd=K/****.parquet
         # STEP 1 - GIT에서 PIP를 설치하고
-        # BASE_DIR/dt=202040101
-        # 
+        # BASE_DIR/dt=202040101/ 먼저 해서 잘 되면
+        # repNationCd=k/도 붙여준다
     
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
@@ -89,17 +89,17 @@ with DAG(
         task_id='nation.f',
         python_callable=common_get_data,
         system_site_packages=False,
-        requirements=[REQUIREMENTS],
+        requirements=REQUIREMENTS,
         op_kwargs="url_param": {"repNationCd": "F"}
         )
-    )
     
     no_param = PythonVirtualenvOperator(
         task_id='no.param',
         python_callable=common_get_data,
         system_site_packages=False,
-        requirements=[REQUIREMENTS],
-        ),
+        requirements=REQUIREMENTS,
+        op_kwargs="url_param": {}
+        )
 
     rm_dir = BashOperator(task_id='rm.dir',
                           bash_command='rm -rf $BASE_DIR/dt={{ ds_nodash }}',
