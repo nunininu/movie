@@ -65,9 +65,22 @@ with DAG(
         from movie.api.call import call_api, list2df, save_df 
         print(ds_nodash, url_param)
         data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
-        df = list2df(data, ds_nodash)        # def test_save_df 에서 가져옴
+        df = list2df(data, ds_nodash, url_param)        # def test_save_df 에서 가져옴
         save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
         print(save_path, url_param)
+        
+        # def test_save_df():
+        #     ymd = "20210101"
+        #     data = call_api(dt=ymd)
+        #     df = list2df(data, ymd)
+        #     base_path = "~/temp/movie"
+        #     r = save_df(df, base_path)
+        #     assert r == f"{base_path}/dt={ymd}"
+        #     print("save_path", r)
+        #     read_df = pd.read_parquet(r)
+        #     assert 'dt' not in read_df.columns
+        #     assert 'dt' in pd.read_parquet(base_path).columns
+        
         
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
