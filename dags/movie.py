@@ -64,10 +64,19 @@ with DAG(
         # 그 후 다른 것도 붙여준다
         from movie.api.call import call_api, list2df, save_df 
         print(ds_nodash, url_param)
-        data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
-        df = list2df(data, ds_nodash, url_param)        # def test_save_df 에서 가져옴
-        save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
-        print(save_path, url_param)
+        
+        
+        data = call_api(dt=ymd, url_param=url_params)   # def test_save_df_url_params() 에서 가져온 코드
+        df = list2df(data, ymd, url_params)             # def test_save_df_url_params() 에서 가져온 코드
+        partitions = ['dt'] + list(url_params.keys())   # def test_save_df_url_params() 에서 가져온 코드
+        r = save_df(df, base_path, partitions)          # def test_save_df_url_params() 에서 가져온 코드
+            
+        
+        # data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
+        # df = list2df(data, ds_nodash, url_param)        # def test_save_df 에서 가져옴
+        # save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
+        # print(save_path, url_param)
+        
         
         # def test_save_df():
         #     ymd = "20210101"
