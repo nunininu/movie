@@ -23,11 +23,11 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@0.2.0"]
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@0.3.0"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
-
+    import os
     def branch_fun(ds_nodash):
-        import os
+        
         check_path = os.path.expanduser(f"{BASE_DIR}/dt={ds_nodash}") #버그 수정
         if os.path.exists(check_path): #버그 수정
             return rm_dir.task_id #task_id로 리턴하는 방법
@@ -42,8 +42,25 @@ with DAG(
     
     def fn_merge_data(ds_nodash):
         print(ds_nodash)
+        # df read => ~/data/movies/dailyboxoffice/dt=20240101
+        # df1 = fill_na_with_column(df, 'multiMovieYn')
+        # df2 = fill_na_with_column(df1, 'repNationCd')
+        # df3 = df2.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
+        # unique_df = df3.drop_duplicates() # 25
+        # unique_df.loc[:, "rnum"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+        # unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+        # save -> ~/data/movies/dailyboxoffice_merged/dt=20240101
         
-    
+    def fill_na_with_column(origin_df, c_name):
+        df = origin_df.copy()
+        for i, row in df.iterrows():
+            if pd.isna(row[c_name]):
+                same_movie_df = df[df["movieCd"] == row["movieCd"]]
+                notna_idx = same_movie_df[c_name].dropna().first_valid_index()
+                if notna_idx is not None:
+                    df.at[i, c_name] = df.at[notna_idx, c_name]
+        return df
+            
     merge_data = PythonVirtualenvOperator(
         task_id='merge.data',
         python_callable=fn_merge_data,
@@ -51,6 +68,7 @@ with DAG(
         requirements=REQUIREMENTS
     )
 
+    
     BASE_URL = "http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
     KEY=os.getenv("MOVIE_KEY")
 
@@ -63,18 +81,50 @@ with DAG(
         # repNationCd=k/도 붙여준다
         # 그 후 다른 것도 붙여준다
         from movie.api.call import call_api, list2df, save_df 
-        print(ds_nodash, url_param)
-        data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
-        df = list2df(data, ds_nodash)        # def test_save_df 에서 가져옴
-        save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
+        print(ds_nodash, url_param, base_path)
+        
+        # From Test_call.py 
+        data = call_api(ds_nodash, url_param=url_param)   # def test_save_df_url_params() 에서 가져온 코드 응용
+        df = list2df(data, ds_nodash, url_param)             # def test_save_df_url_params() 에서 가져온 코드 응용
+        partitions = ['dt'] + list(url_param.keys())   # def test_save_df_url_params() 에서 가져온 코드 응용
+        save_path = save_df(df, base_path, partitions)          # def test_save_df_url_params() 에서 가져온 코드 응용
+            
+        
+        # Airflow의 log 메세지 숨김/펼침 기능 포맷 
+        # https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/logging-tasks.html#grouping-of-log-lines
+        print("::group::movie df save...")
+        print("save_path--->"+ save_path)
+        print("url_param--->" + str(url_param))
+        print("ds_nodash--->" + ds_nodash)
+        print("::endgroup::")
+        
         print(save_path, url_param)
+        
+        ## 구 코드
+        # data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
+        # df = list2df(data, ds_nodash, url_param)        # def test_save_df 에서 가져옴
+        # save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
+        
+        
+        # def test_save_df():
+        #     ymd = "20210101"
+        #     data = call_api(dt=ymd)
+        #     df = list2df(data, ymd)
+        #     base_path = "~/temp/movie"
+        #     r = save_df(df, base_path)
+        #     assert r == f"{base_path}/dt={ymd}"
+        #     print("save_path", r)
+        #     read_df = pd.read_parquet(r)
+        #     assert 'dt' not in read_df.columns
+        #     assert 'dt' in pd.read_parquet(base_path).columns
+        
         
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn": "Y"}}
+        op_kwargs={"url_param":{"multiMovieYn": "Y"},"base_path": BASE_DIR}
         )
 
     multi_n = PythonVirtualenvOperator(
@@ -82,7 +132,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn": "N"}}
+        op_kwargs={"url_param":{"multiMovieYn": "N"},"base_path": BASE_DIR}
         )
     
 
@@ -91,7 +141,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd": "K"}}
+        op_kwargs={"url_param":{"repNationCd": "K"},"base_path": BASE_DIR}
         )
     
 
@@ -100,7 +150,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd": "F"}}
+        op_kwargs={"url_param":{"repNationCd": "F"},"base_path": BASE_DIR}
         )
     
     no_param = PythonVirtualenvOperator(
@@ -108,7 +158,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{}}
+        op_kwargs={"url_param":{},"base_path": BASE_DIR}
         )
 
     rm_dir = BashOperator(

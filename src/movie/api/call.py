@@ -28,16 +28,19 @@ def call_api(dt="20120101", url_param={}):
 #     return data['boxOfficeResult']['dailyBoxOfficeList']
 
 
-def list2df(data: list, dt: str):
+def list2df(data: list, dt: str, url_params={}):
     df = pd.DataFrame(data)
     df['dt'] = dt
     # def test_list2df_check_num을 테스트하려면 call.py 에서 list2df를 바꿔야함
+    for k, v in url_params.items():
+        df[k] = v
+        
     num_cols = ['rnum','rank','rankInten','salesAmt','audiCnt','audiAcc','scrnCnt','salesShare','salesInten','salesChange','audiInten','audiChange'] 
     # 1) 이렇게 쓰거나
     #for col_name in num_cols:     
         #df[col_name] = pd.to_numeric(df[col_name]) 
     # 2) 이렇게 써야함
-    from pandas.api.types import is_numeric_dtype
+
     df[num_cols] = df[num_cols].apply(pd.to_numeric) # 내가 test_list2df_check_num에서 작성한 코드 -> 거기가 아니라 여기에 넣어었어야했음 
     return df
 
@@ -47,9 +50,12 @@ def list2df(data: list, dt: str):
 #     df["dt"] = ymd
 #     return df
 
-def save_df(df, base_path):
-    df.to_parquet(base_path, partition_cols=['dt'])
-    save_path = f"{base_path}/dt={df['dt'][0]}"
+#{"multiMovieYn":= "Y"]
+def save_df(df, base_path, partitions=['dt']):
+    df.to_parquet(base_path, partition_cols=partitions)
+    save_path = base_path
+    for p in partitions:
+        save_path = save_path + f"/{p}={df[p][0]}"
     return save_path
 
 #     ymd = "20210101"
@@ -58,6 +64,14 @@ def save_df(df, base_path):
 #     base_path = "~/temp/movie"
     
     
-
+def fill_na_with_column(origin_df, c_name):
+        df = origin_df.copy()
+        for i, row in df.iterrows():
+            if pd.isna(row[c_name]):
+                same_movie_df = df[df["movieCd"] == row["movieCd"]]
+                notna_idx = same_movie_df[c_name].dropna().first_valid_index()
+                if notna_idx is not None:
+                    df.at[i, c_name] = df.at[notna_idx, c_name]
+        return df
     
     

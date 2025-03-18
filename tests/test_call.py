@@ -1,8 +1,8 @@
-from movie.api.call import gen_url, call_api, list2df, save_df
+from movie.api.call import gen_url, call_api, list2df, save_df, fill_na_with_column
 import pandas as pd
 import os
 
-def test_gen_url_default():
+def test_gen_url():
     r = gen_url()
     print(r)
     assert "kobis" in r
@@ -44,6 +44,25 @@ def test_save_df():
     read_df = pd.read_parquet(r)
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
+ 
+    
+def test_save_df_url_params():
+    ymd = "20210101"
+    url_params = {"multiMovieYn": "Y"}
+    base_path = "~/temp/movie"
+    
+    # To Airflow Dag
+    data = call_api(dt=ymd, url_param=url_params)   #airflow에는 이 4줄 가져다 쓰면 됨
+    df = list2df(data, ymd, url_params)             #airflow에는 이 4줄 가져다 쓰면 됨
+    partitions = ['dt'] + list(url_params.keys())   #airflow에는 이 4줄 가져다 쓰면 됨
+    r = save_df(df, base_path, partitions)          #airflow에는 이 4줄 가져다 쓰면 됨
+    
+    assert r == f"{base_path}/dt={ymd}/multiMovieYn=Y"
+    print("save_path", r)
+    read_df = pd.read_parquet(r)
+    assert 'dt' not in read_df.columns
+    assert 'dt' in pd.read_parquet(base_path).columns
+
     
 def test_list2df_check_num():
     """df에 숫자 컬럼을 변환하고 잘 되었는지 확인"""
@@ -61,3 +80,13 @@ def test_list2df_check_num():
         #assert df[c].dtype in ['int64', 'float64'], f"{c} 가 숫자가 아님"  # 1) 이렇게 쓰거나 (강사님 정답 코드)
         assert is_numeric_dtype(df[c]) # 2) 이렇게 쓰면 됨 (내가 작성한 코드)
     
+def test_merge_df():
+    PATH = "~/data/movies/dailyboxoffice/dt=20240101"
+    df = pd.read_parquet(PATH)
+    assert len(df) == 50
+    
+    df1 = fill_na_with_column(df, 'multiMovieYn')
+    assert df1["multiMovieYn"].isna().sum() == 5
+    
+    df2 = fill_na_with_column(df, 'repNationCd')
+    assert df1["repNationCd"].isna().sum() == 5
