@@ -1,4 +1,4 @@
-from movie.api.call import gen_url, call_api, list2df, save_df
+from movie.api.call import gen_url, call_api, list2df, save_df, fill_na_with_column
 import pandas as pd
 import os
 
@@ -84,3 +84,9 @@ def test_merge_df():
     PATH = "~/data/movies/dailyboxoffice/dt=20240101"
     df = pd.read_parquet(PATH)
     assert len(df) == 50
+    
+    df1 = fill_na_with_column(df, 'multiMovieYn')
+    assert df1["multiMovieYn"].isna().sum() == 5
+    
+    df2 = fill_na_with_column(df, 'repNationCd')
+    assert df1["repNationCd"].isna().sum() == 5

@@ -64,6 +64,14 @@ def save_df(df, base_path, partitions=['dt']):
 #     base_path = "~/temp/movie"
     
     
-
+def fill_na_with_column(origin_df, c_name):
+        df = origin_df.copy()
+        for i, row in df.iterrows():
+            if pd.isna(row[c_name]):
+                same_movie_df = df[df["movieCd"] == row["movieCd"]]
+                notna_idx = same_movie_df[c_name].dropna().first_valid_index()
+                if notna_idx is not None:
+                    df.at[i, c_name] = df.at[notna_idx, c_name]
+        return df
     
     
