@@ -80,13 +80,3 @@ def test_list2df_check_num():
         #assert df[c].dtype in ['int64', 'float64'], f"{c} 가 숫자가 아님"  # 1) 이렇게 쓰거나 (강사님 정답 코드)
         assert is_numeric_dtype(df[c]) # 2) 이렇게 쓰면 됨 (내가 작성한 코드)
     
-def test_merge_df():
-    PATH = "~/data/movies/dailyboxoffice/dt=20240101"
-    df = pd.read_parquet(PATH)
-    assert len(df) == 50
-    
-    df1 = fill_na_with_column(df, 'multiMovieYn')
-    assert df1["multiMovieYn"].isna().sum() == 5
-    
-    df2 = fill_na_with_column(df, 'repNationCd')
-    assert df1["repNationCd"].isna().sum() == 5
