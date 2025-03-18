@@ -23,11 +23,11 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@0.2.0"]
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@0.2.6"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
-
+    import os
     def branch_fun(ds_nodash):
-        import os
+        
         check_path = os.path.expanduser(f"{BASE_DIR}/dt={ds_nodash}") #버그 수정
         if os.path.exists(check_path): #버그 수정
             return rm_dir.task_id #task_id로 리턴하는 방법
@@ -51,6 +51,7 @@ with DAG(
         requirements=REQUIREMENTS
     )
 
+    
     BASE_URL = "http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
     KEY=os.getenv("MOVIE_KEY")
 
@@ -63,19 +64,29 @@ with DAG(
         # repNationCd=k/도 붙여준다
         # 그 후 다른 것도 붙여준다
         from movie.api.call import call_api, list2df, save_df 
-        print(ds_nodash, url_param)
+        print(ds_nodash, url_param, base_path)
         
-        
-        data = call_api(dt=ymd, url_param=url_params)   # def test_save_df_url_params() 에서 가져온 코드
-        df = list2df(data, ymd, url_params)             # def test_save_df_url_params() 에서 가져온 코드
-        partitions = ['dt'] + list(url_params.keys())   # def test_save_df_url_params() 에서 가져온 코드
-        r = save_df(df, base_path, partitions)          # def test_save_df_url_params() 에서 가져온 코드
+        # From Test_call.py 
+        data = call_api(ds_nodash, url_param=url_param)   # def test_save_df_url_params() 에서 가져온 코드 응용
+        df = list2df(data, ds_nodash, url_param)             # def test_save_df_url_params() 에서 가져온 코드 응용
+        partitions = ['dt'] + list(url_param.keys())   # def test_save_df_url_params() 에서 가져온 코드 응용
+        save_path = save_df(df, base_path, partitions)          # def test_save_df_url_params() 에서 가져온 코드 응용
             
         
+        # Airflow의 log 메세지 숨김/펼침 기능 포맷 
+        # https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/logging-tasks.html#grouping-of-log-lines
+        print("::group::movie df save...")
+        print("save_path--->"+ save_path)
+        print("url_param--->" + str(url_param))
+        print("ds_nodash--->" + ds_nodash)
+        print("::endgroup::")
+        
+        print(save_path, url_param)
+        
+        ## 구 코드
         # data = call_api(ds_nodash, url_param) # def test_save_df 에서 가져옴
         # df = list2df(data, ds_nodash, url_param)        # def test_save_df 에서 가져옴
         # save_path = save_df(df, base_path) # def test_save_df 에서 가져옴
-        # print(save_path, url_param)
         
         
         # def test_save_df():
@@ -96,7 +107,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn": "Y"}}
+        op_kwargs={"url_param":{"multiMovieYn": "Y"},"base_path": BASE_DIR}
         )
 
     multi_n = PythonVirtualenvOperator(
@@ -104,7 +115,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn": "N"}}
+        op_kwargs={"url_param":{"multiMovieYn": "N"},"base_path": BASE_DIR}
         )
     
 
@@ -113,7 +124,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd": "K"}}
+        op_kwargs={"url_param":{"repNationCd": "K"},"base_path": BASE_DIR}
         )
     
 
@@ -122,7 +133,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd": "F"}}
+        op_kwargs={"url_param":{"repNationCd": "F"},"base_path": BASE_DIR}
         )
     
     no_param = PythonVirtualenvOperator(
@@ -130,7 +141,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{}}
+        op_kwargs={"url_param":{},"base_path": BASE_DIR}
         )
 
     rm_dir = BashOperator(
