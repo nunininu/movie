@@ -1,6 +1,6 @@
 from movie.api.call import(gen_url, call_api, list2df, save_df, 
                            fill_na_with_column, 
-                           create_unique_ranked_df,
+                           gen_unique_df,
                            re_ranking
                             )
 import pandas as pd
@@ -96,8 +96,12 @@ def test_merge_df():
     assert df2["repNationCd"].isna().sum() == 5
     
     drop_columns=['rnum', 'rank', 'rankInten', 'salesShare']
-    unique_df = create_unique_ranked_df(df=df2, drop_columns=drop_columns)
+    unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
     assert len(unique_df) == 25
     
     new_ranked_df = re_ranking(unique_df)
     assert new_ranked_df.iloc[0]['movieNm'] == '노량: 죽음의 바다'
+    
+def test_merge_save():
+    pass
+    # TODO

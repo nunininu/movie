@@ -74,7 +74,7 @@ def fill_na_with_column(origin_df, c_name):
                     df.at[i, c_name] = df.at[notna_idx, c_name]
         return df
     
-def create_unique_ranked_df(df, drop_columns):
+def gen_unique_df(df, drop_columns):
     df1 = fill_na_with_column(df, 'multiMovieYn')
     df2 = fill_na_with_column(df1, 'repNationCd')
     df3 = df2.drop(columns=drop_columns)
