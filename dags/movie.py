@@ -23,10 +23,11 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250319.2"]
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250319.3"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
     import os
-    def branch_fun(ds_nodash):
+    
+    def branch_fun(ds_nodash, BASE_DIR):
         
         check_path = os.path.expanduser(f"{BASE_DIR}/dt={ds_nodash}") #버그 수정
         if os.path.exists(check_path): #버그 수정
@@ -35,12 +36,22 @@ with DAG(
         else:
             return "get.start", "echo.task" #task실제이름으로 리턴하는 방법
 
+    # ERR: NameError (BASE_DIR is not defined)
+    # 추가 설명: 
+    # """
+    # branch_fun 함수의 정의를 def branch_fun(ds_nodash, base_dir):로 수정하여 base_dir 인자를 받도록 합니다.
+    # BranchPythonOperator의 op_kwargs를 사용하여 {"base_dir": BASE_DIR}을 전달합니다. 
+    # 이렇게 하면 BASE_DIR 값이 branch_fun 함수 내부의 base_dir 변수에 전달됩니다.
+    # 이렇게 수정하면 branch_fun 함수 내부에서 BASE_DIR을 사용할 수 있게 되어 NameError가 해결됩니다.
+    # """
+        
     branch_op = BranchPythonOperator(
         task_id="branch.op",
-        python_callable=branch_fun
+        python_callable=branch_fun,
+        op_kwargs={"BASE_DIR": BASE_DIR} # BASE_DIR을 인자로 전달
     )
     
-    def fn_merge_data(ds_nodash):
+    def fn_merge_data(ds_nodash, BASE_DIR):
         from movie.api.call import fill_na_with_column, gen_unique_df, re_ranking, save_df
         import pandas as pd
         #print(ds_nodash)
@@ -51,9 +62,9 @@ with DAG(
         df2 = fill_na_with_column(df1, 'repNationCd')
         drop_columns=['rnum', 'rank', 'rankInten', 'salesShare']
         unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
-        new_ranked_df = re_ranking(unique_df)
+        new_ranked_df = re_ranking(unique_df, dt={ds_nodash})
         merge_save_path = save_df(new_ranked_df, f"/home/data/sgcho/movies/merge/dailyboxoffice")
-        print(new_ranked_df.to_parquet(merge_save_path))
+        print(new_ranked_df.to_parquet(merge_save_path, engine='pyarrow'))
         
         
         
@@ -72,7 +83,8 @@ with DAG(
         task_id='merge.data',
         python_callable=fn_merge_data,
         system_site_packages=False,
-        requirements=REQUIREMENTS
+        requirements=REQUIREMENTS,
+        op_kwargs={"BASE_DIR": BASE_DIR} # BASE_DIR을 인자로 전달
     )
 
     

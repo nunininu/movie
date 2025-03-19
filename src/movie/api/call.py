@@ -85,9 +85,9 @@ def gen_unique_df(df, drop_columns):
 # unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
 
 def re_ranking(unique_df: pd.DataFrame, dt: str) -> pd.DataFrame:
-    unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+    unique_df["rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
     new_ranked_df = unique_df[['rank', 'movieCd', 'movieNm', 'audiCnt']].copy()
-    new_ranked_df.loc[:,'dt'] = dt #loc를 사용하여 경고 해결
+    new_ranked_df["dt"] = dt #loc를 사용하여 경고 해결
     return new_ranked_df
     
     
