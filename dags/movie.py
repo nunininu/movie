@@ -62,9 +62,9 @@ with DAG(
         df2 = fill_na_with_column(df1, 'repNationCd')
         drop_columns=['rnum', 'rank', 'rankInten', 'salesShare']
         unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
-        new_ranked_df = re_ranking(unique_df, dt={ds_nodash})
-        merge_save_path = save_df(new_ranked_df, f"/home/data/sgcho/movies/merge/dailyboxoffice")
-        print(new_ranked_df.to_parquet(merge_save_path, engine='pyarrow'))
+        new_ranked_df = re_ranking(unique_df, dt=ds_nodash)
+        merge_save_path = save_df(new_ranked_df, f"/home/sgcho/data/movies/merge/dailyboxoffice")
+        print(merge_save_path + "<================ 에 저장됨")
         
         
         
