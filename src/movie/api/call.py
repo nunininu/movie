@@ -74,4 +74,17 @@ def fill_na_with_column(origin_df, c_name):
                     df.at[i, c_name] = df.at[notna_idx, c_name]
         return df
     
-    
+def create_unique_ranked_df(df, drop_columns):
+    df1 = fill_na_with_column(df, 'multiMovieYn')
+    df2 = fill_na_with_column(df1, 'repNationCd')
+    df3 = df2.drop(columns=drop_columns)
+    unique_df = df3.drop_duplicates()
+    return unique_df
+
+# unique_df.loc[:, "rnum"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+# unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+
+def re_ranking(unique_df):
+    unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
+    new_ranked_df = unique_df[['rank', 'movieCd', 'movieNm', 'audiCnt']]
+    return new_ranked_df
