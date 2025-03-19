@@ -41,15 +41,32 @@ with DAG(
     )
     
     def fn_merge_data(ds_nodash):
-        print(ds_nodash)
+        from movie.api.call import fill_na_with_column, gen_unique_df, re_ranking, save_df
+        import pandas as pd
+        #print(ds_nodash)
         # df read => ~/data/movies/dailyboxoffice/dt=20240101
+        path = f"{BASE_DIR}/dt={ds_nodash}"
+        df = pd.read_parquet(path)
+        df1 = fill_na_with_column(df, 'multiMovieYn')
+        df2 = fill_na_with_column(df1, 'repNationCd')
+        drop_columns=['rnum', 'rank', 'rankInten', 'salesShare']
+        unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
+        new_ranked_df = re_ranking(unique_df)
+        merge_save_path = save_df(new_ranked_df, f"/home/data/sgcho/movies/merge/dailyboxoffice")
+        print(new_ranked_df.to_parquet(merge_save_path))
+        
+        
+        
+        
+        
+        
         # df1 = fill_na_with_column(df, 'multiMovieYn')
         # df2 = fill_na_with_column(df1, 'repNationCd')
         # df3 = df2.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
         # unique_df = df3.drop_duplicates() # 25
         # unique_df.loc[:, "rnum"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
         # unique_df.loc[:, "rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
-        # save -> ~/data/movies/dailyboxoffice_merged/dt=20240101
+        # save -> ~/data/sgcho/movies/merge/dailyboxoffice/dt=20240101
             
     merge_data = PythonVirtualenvOperator(
         task_id='merge.data',
@@ -153,7 +170,7 @@ with DAG(
 
     rm_dir = BashOperator(
         task_id='rm.dir',
-        bash_command='rm -rf {BASE_DIR}' + '/dt={{ ds_nodash }}') #버그 수정
+        bash_command=f'rm -rf {BASE_DIR}' + '/dt={{ ds_nodash }}') #버그 수정
                           
 
     echo_task = BashOperator(
@@ -166,7 +183,16 @@ with DAG(
     get_start = EmptyOperator(task_id='get.start',
                               trigger_rule="all_done")
     get_end = EmptyOperator(task_id='get.end')
-    
+
+
+    make_done = BashOperator(
+        task_id = 'make.done',
+        bash_command="""
+        DONE_BASE=/home/sgcho/data/movies/done/dailyboxoffice
+        mkdir -p ${DONE_BASE}/{{ ds_nodash }}
+        touch ${DONE_BASE}/{{ ds_nodash }}/_DONE
+        """
+    )    
 
     start >> branch_op
 
@@ -175,7 +201,16 @@ with DAG(
     branch_op >> echo_task
     get_start >> [multi_y, multi_n, nation_k, nation_f, no_param] >> get_end
 
-    get_end >> merge_data >> end
+    get_end >> merge_data >> make_done >> end
+
+
+
+
+
+
+
+
+
 
 ## 내가 썼던 코드 
 # from airflow.operators.bash import BashOperator

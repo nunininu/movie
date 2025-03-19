@@ -99,9 +99,27 @@ def test_merge_df():
     unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
     assert len(unique_df) == 25
     
-    new_ranked_df = re_ranking(unique_df)
+    new_ranked_df = re_ranking(unique_df, "20240101")
     assert new_ranked_df.iloc[0]['movieNm'] == '노량: 죽음의 바다'
     
 def test_merge_save():
-    pass
-    # TODO
+        
+    # To Airflow Dag
+    BASE_DIR = "~/data/movies/dailyboxoffice"
+    ds = "20240101"
+    PATH = f"{BASE_DIR}/dt={ds}"
+    loaded_df = pd.read_parquet(PATH)
+    df1 = fill_na_with_column(loaded_df, 'multiMovieYn')
+    df2 = fill_na_with_column(df1, 'repNationCd')
+    drop_columns=['rnum', 'rank', 'rankInten', 'salesShare']
+    unique_df = gen_unique_df(df=df2, drop_columns=drop_columns)
+    new_ranked_df = re_ranking(unique_df, ds)
+    save_path = save_df(new_ranked_df, '~/temp/movie/merge')
+    assert save_path == f"~/temp/movie/merge/dt={ds}"
+    #merge_save_df = merge_save(new_ranked_df, BASE_DIR, partitions=['dt'])          #airflow에는 이 4줄 가져다 쓰면 됨
+    
+    
+    
+    #read_df = pd.read_parquet(r)
+    #assert 'dt' not in read_df.columns
+    #   assert new_ranked_df.to_parquet(f"{merge_base_path}/dt={ds_nodash}") == r
