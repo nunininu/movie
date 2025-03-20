@@ -8,10 +8,12 @@ from airflow.operators.python import (
 )
 
 from airflow.sensors.filesystem import FileSensor
+from pprint import pprint
 
+DAG_ID = "movie_after"
 
 with DAG(
-    'movie_after',
+    DAG_ID,
     default_args={
         'depends_on_past': True,
         'retries': 1,
@@ -22,10 +24,13 @@ with DAG(
     description='movie',
     schedule="10 10 * * *",
     start_date=datetime(2024, 1, 1),
-    end_date=datetime(2024, 12, 31),
+    end_date=datetime(2024, 1, 5),
     catchup=True,
     tags=['api', 'movie', 'sensor'],
 ) as dag:
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250320.2"]
+    BASE_DIR = f"~/data/{DAG_ID}"
+       
     start = EmptyOperator(task_id = 'start')
     end = EmptyOperator(task_id = 'end')
     
@@ -38,4 +43,45 @@ with DAG(
         mode="reschedule",  # 리소스를 점유하지 않고 절약하는 방식
     )
     
-    start >> check_done >> end
+    def fn_gen_meta(**kwargs):
+        import json
+        print(json.dumps(kwargs, indent=4, ensure_ascii=False))
+        # TODO f"{base_path}/meta/meta.parquet -> 경로로 저장
+
+
+    gen_meta = PythonVirtualenvOperator(
+        task_id="gen.meta",
+        python_callable=fn_gen_meta,
+        requirements=REQUIREMENTS,
+        system_site_packages=False,
+    )
+
+    def fn_gen_movie(base_path, ds, **kwargs):
+        import json
+        print(json.dumps(kwargs, indent=4, ensure_ascii=False))
+        print(f"base_path: {base_path}")
+        # TODO -> f"{base_path}/dailyboxoffice/ 생성
+        # movie airflow 의 merge.data 와 같은 동작 ( meta.parquet 사용 )
+        # 파티션은 dt, multiMovieYn, repNationCd
+
+    gen_movie = PythonVirtualenvOperator(
+        task_id="gen.movie",
+        python_callable=fn_gen_movie,
+        requirements=REQUIREMENTS,
+        system_site_packages=False,
+        op_kwargs={"base_path": BASE_DIR},
+    )
+
+    make_done = BashOperator(
+        task_id="make.done",
+        bash_command="""
+        DONE_BASE=$BASE_DIR/done
+        echo $DONE_BASE
+        mkdir -p $DONE_BASE/{{ ds_nodash }}
+        touch $DONE_BASE/{{ ds_nodash }}/_DONE
+        """,
+        env={'BASE_DIR':BASE_DIR},
+        append_env = True
+    )
+
+    start >> check_done >> gen_meta >> gen_movie >> make_done >> end
