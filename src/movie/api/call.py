@@ -86,8 +86,40 @@ def gen_unique_df(df, drop_columns):
 
 def re_ranking(unique_df: pd.DataFrame, dt: str) -> pd.DataFrame:
     unique_df["rank"] = unique_df["audiCnt"].rank(ascending=False).astype(int)
-    new_ranked_df = unique_df[['rank', 'movieCd', 'movieNm', 'audiCnt']].copy()
-    new_ranked_df["dt"] = dt #loc를 사용하여 경고 해결
-    return new_ranked_df
+    #new_ranked_df = unique_df[['rank', 'movieCd', 'movieNm', 'audiCnt']].copy()
+    unique_df["dt"] = dt #loc를 사용하여 경고 해결
+    return unique_df
+    
+
+def fillna_meta(previous_df, current_df):
+    if previous_df is not None:
+        previous_df.set_index("movieCd", inplace=True)
+        current_df.set_index("movieCd", inplace=True)
+    
+        merged_df = previous_df.merge(current_df, on="movieCd", how="outer", suffixes=("_A", "_B"))
+
+        for i in range(0,len(merged_df)):    
+            if pd.isna(merged_df.iloc[i, 0]):
+                merged_df.iloc[i, 0] = merged_df.iloc[i, 2]
+            if pd.isna(merged_df.iloc[i, 1]):
+                merged_df.iloc[i, 1] = merged_df.iloc[i, 3]
+
+        multiMovieYn = merged_df.copy()['multiMovieYn_A'].tolist()     
+        repNationCd = merged_df.copy()['repNationCd_A'].tolist()
+        data = {"multiMovieYn": multiMovieYn, "repNationCd": repNationCd}
+        df = pd.DataFrame(data)
+        df["movieCd"] = merged_df.index
+
+        # movieCd 열을 맨 왼쪽으로 이동 
+        df.insert(0, 'movieCd', df.pop('movieCd'))
+        return df
+    
+    else:
+        return current_df
     
     
+    
+                              
+                           
+# def fillna_meta_none_previous_df():
+#     pass

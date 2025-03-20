@@ -23,7 +23,7 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250320.1"]
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250320.3"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
     import os
     
