@@ -19,11 +19,11 @@ with DAG(
     description='movie',
     schedule="10 10 * * *",
     start_date=datetime(2024, 1, 1),
-    end_date=datetime(2024, 12, 31),
+    end_date=datetime(2025, 1, 1),
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250319.9"]
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250320.1"]
     BASE_DIR = "~/data/movies/dailyboxoffice"
     import os
     
