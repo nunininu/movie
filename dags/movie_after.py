@@ -28,8 +28,8 @@ with DAG(
     catchup=True,
     tags=['api', 'movie', 'sensor'],
 ) as dag:
-    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250320.3"]
-    BASE_DIR = f"~/data/{DAG_ID}"
+    REQUIREMENTS = ["git+https://github.com/nunininu/movie.git@250322.0"]
+    BASE_DIR = f"/home/sgcho/data/{DAG_ID}"
        
     start = EmptyOperator(task_id = 'start')
     end = EmptyOperator(task_id = 'end')
@@ -44,19 +44,29 @@ with DAG(
     )
     
     def fn_gen_meta(ds_nodash, base_path, **kwargs):
-        import json
-        import pandas as pd
-        #print(json.dumps(kwargs, indent=4, ensure_ascii=False))
+        # import json
+        # print(json.dumps(kwargs, indent=4, ensure_ascii=False))
         # json.dumps(kwargs, indent=4, ensure_ascii=False)
-        df = pd.read_parquet(f'/home/sgcho/data/movies/merge/dailyboxoffice/dt={ds_nodash}')[['movieCd', 'multiMovieYn', 'repNationCd']]
+        import pandas as pd
+        from movie.api.after import fillna_meta, read_df_or_none, save_with_mkdir
         
+        
+        meta_path = f"{base_path}/meta/meta.parquet"
+        previous_df = read_df_or_none(meta_path)
         # IF 없으면 ... 위 df 를 그냥 meta 로 저장
-        import os
-        meta_df = pd.read_parquet(f"{base_path}/meta/meta.parquet")
+        
+        current_df = pd.read_parquet(f'/home/sgcho/data/movies/merge/dailyboxoffice/dt={ds_nodash}')[
+            ['movieCd', 'multiMovieYn', 'repNationCd']
+        ]
         
         # df, meta_df 를 fill
+        update_meta_df = fillna_meta(previous_df, current_df)
         
         # 저장 meta.parquet
+        save_with_mkdir(update_meta_df, meta_path)
+        print(update_meta_df)
+        
+        
         
         # df2 = pd.DataFrame()
         # df = df1.combine_first(df2) ???????????????????????????
@@ -69,6 +79,7 @@ with DAG(
         python_callable=fn_gen_meta,
         requirements=REQUIREMENTS,
         system_site_packages=False,
+        op_kwargs={"base_path": BASE_DIR}
     )
 
     
@@ -90,22 +101,34 @@ with DAG(
     
     
     def fn_gen_movie(base_path, ds_nodash, **kwargs):
-        import json
-        from movie.api.call import fillna_meta
+        # import json
+        # print(json.dumps(kwargs, indent=4, ensure_ascii=False))
+        # print(f"base_path: {base_path}")
         import pandas as pd
-        print(json.dumps(kwargs, indent=4, ensure_ascii=False))
-        print(f"base_path: {base_path}")
-        # df = pd.read_parquet(f"{base_path}/meta/meta.parquet")
+        from movie.api.call import save_df
+        from movie.api.after import combine_df
         
-        meta_df = pd.read_parquet(f"{base_path}/meta/meta.parquet")
-        df = pd.read_parquet(f'/home/sgcho/data/movies/merge/dailyboxoffice/dt={ds_nodash}')
+        # meta.parquet 읽기
+        meta_path = f"{base_path}/meta/meta.parquet"
+        meta_df = pd.read_parquet(meta_path)
         
-        # meta_df, df 를 join 해서 최대한 댜양성, 해외 컬럼을 채워서 저장
+        # movie의 merge/dt={ds_nodash}/~~ .parquet 파일 읽기
+        current_df = pd.read_parquet(f'/home/sgcho/data/movies/merge/dailyboxoffice/dt={ds_nodash}')
+        
+        # 두 파일 합치기 (combine_first)
+        final_df = combine_df(meta_df, current_df, ds_nodash)
         
         
-        partitions=['dt', 'multiMovieYn', 'repNationCd']
-        df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols=partitions)
+        # save_d
         
+        
+        save_df(
+            final_df,
+            f"{base_path}/dailyboxoffice",
+            ["dt", "multiMovieYn", "repNationCd"], # meta_df, df 를 join 해서 최대한 댜양성, 해외 컬럼을 채워서 저장
+        )   # partitions=['dt', 'multiMovieYn', 'repNationCd'] partition columns들로 저장
+            # df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols=partitions) 
+        print(final_df)
         
         
         # import json
